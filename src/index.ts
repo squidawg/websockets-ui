@@ -1,7 +1,7 @@
 import { httpServer } from "./http_server/index.js";
 import {RawData, WebSocketServer} from 'ws'
 import {commandController} from "./ws_server/commandController.js";
-import {ROOM} from "./types";
+import {ROOM} from "./types.js";
 const HTTP_PORT = 3000;
 
 const wsServer = new WebSocketServer({ server: httpServer });
