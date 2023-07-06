@@ -2,14 +2,13 @@ import {RawData} from "ws";
 import {onUpdateDb, onGetUser} from "../db.js";
 import {PLAYER, ROOM, RoomState} from "../types.js";
 
-export const commandController = async (id:string,data: RawData) => {
+export const commandController = (id:string,data: RawData)=> {
     const resData = JSON.parse(String(data));
     switch (resData.type) {
         case PLAYER.REG:
             onUpdateDb(id, resData);
-            return resData;
+            return [PLAYER.REG, resData];
         case ROOM.CREATE_ROOM:
-            console.log(resData)
             const data = JSON.stringify([
                 {
                     roomId: 0,
@@ -22,12 +21,26 @@ export const commandController = async (id:string,data: RawData) => {
                         ],
                 },
             ]);
-            return onUpdateRequest(ROOM.UPDATE_ROOM, data, resData)
+            return [ROOM.UPDATE_ROOM, onUpdateRequest(ROOM.UPDATE_ROOM,resData,data)];
+        case ROOM.ADD_PLAYER:
+            const createGame = JSON.stringify({
+                data:
+                    JSON.stringify({
+                        idGame: 0,
+                        idPlayer: 0,
+                    })
+            })
+            const updRoom = JSON.stringify({data: []})
+            const onCreateGame = onUpdateRequest(ROOM.CREATE_GAME,resData,createGame);
+            const onUpdateRoom = onUpdateRequest(ROOM.UPDATE_ROOM,resData,updRoom);
+            return [ROOM.ADD_PLAYER, onCreateGame, onUpdateRoom]
     }
 }
 
-const onUpdateRequest = (type:string, data:string, resData:RoomState) => {
+const onUpdateRequest = (type:string,resData:RoomState,  data:string):RoomState => {
     resData.type = type;
-    resData.data = data
-    return resData
+    if(data){
+        resData.data = data
+    }
+    return JSON.parse(JSON.stringify(resData))
 }
