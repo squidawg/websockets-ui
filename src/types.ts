@@ -9,6 +9,12 @@ export interface User {
     }
     id:number
 }
+export interface CreateGame {
+    type: string,
+    data: string
+    id: number,
+
+}
 
 export enum PLAYER {
     REG ='reg',
@@ -17,8 +23,9 @@ export enum PLAYER {
 
 export enum ROOM {
     CREATE_ROOM='create_room',
+    CREATE_GAME='create_game',
     UPDATE_ROOM='update_room',
-    ADD_PLAYER='add_player_to_room',
+    ADD_PLAYER='add_user_to_room',
     START_GAME='start_game',
     FINISH_GAME='finish'
 }
