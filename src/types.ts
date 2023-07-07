@@ -1,19 +1,9 @@
-export interface User {
-    uid?:string,
-    type: string,
-    data:{
-        name:string,
-        password:string
-        error?:boolean,
-        errorText?:string
-    }
-    id:number
-}
-export interface CreateGame {
-    type: string,
-    data: string
-    id: number,
 
+export interface Payload {
+    uid?:string,
+    type:string
+    data:{}|""
+    id:number
 }
 
 export enum PLAYER {
@@ -35,10 +25,4 @@ export enum GAME {
     ATTACK='attack',
     RANDOM_ATTACK='randomAttack',
     TURN='turn'
-}
-
-export interface RoomState {
-    type: string,
-    data:string,
-    id: number,
 }
