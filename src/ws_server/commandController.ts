@@ -1,64 +1,121 @@
 import {RawData} from "ws";
-import {onUpdateDb, onGetUser} from "../db.js";
-import {GAME, Payload, PLAYER, ROOM} from "../types.js";
+import {Database} from "../db.js";
+import {GAME, Payload, PLAYER, Response, Room, ROOM, User} from "../types.js";
 
-export const commandController = (id:string,data: RawData) => {
+const database = new Database();
+
+export const commandController = (id:number,data: RawData) => {
+
     const resData = JSON.parse(String(data));
     switch (resData.type) {
         case PLAYER.REG:
-            onUpdateDb(id, resData);
+            const resDataParse = JSON.parse(resData.data)
+            const user = new User(id, resDataParse.name, resDataParse.password);
+            database.addUser(user);
             const userPayload = JSON.stringify(
                 {
-                    name:onGetUser(id)?.name,
-                    index: onGetUser(id)?.id,
+                    name: user.getName,
+                    index: user.getUserId,
                     error: false,
                     errorText: '',
                 }
-            )
-            return [PLAYER.REG, onUpdateRequest(PLAYER.REG,resData,userPayload)];
+            );
+            const userRes:Response = {
+                type:PLAYER.REG,
+                payload: [onUpdateRequest(PLAYER.REG,resData,userPayload)]
+            }
+            return userRes
         case ROOM.CREATE_ROOM:
+            const roomId =  Math.floor(Math.random() * 10) + 1;
+            const newRoom = new Room(roomId);
+            const roomCreator = database.getUserById(id);
+            if(!roomCreator){
+                console.log('user not found')
+                return;
+            }
+            newRoom.addUser(roomCreator);
+            database.addRoom(newRoom);
             const roomUpdPayload = JSON.stringify([
                 {
-                    roomId: Math.floor(Math.random() * 10) + 1,
+                    roomId: roomId,
                     roomUsers:
                         [
                             {
-                                name: onGetUser(id)?.name,
-                                index: onGetUser(id)?.id,
+                                name: roomCreator.getName,
+                                index: roomCreator.getUserId,
                             }
                         ],
                 },
             ]);
-            return [ROOM.UPDATE_ROOM, onUpdateRequest(ROOM.UPDATE_ROOM,resData,roomUpdPayload)];
+            const roomResponse:Response = {type:ROOM.UPDATE_ROOM, payload:[onUpdateRequest(ROOM.UPDATE_ROOM,resData,roomUpdPayload)]}
+            return roomResponse;
         case ROOM.ADD_PLAYER:
-            const createGamePayload = JSON.stringify({
-                idGame: 0,
-                idPlayer: onGetUser(id)?.id,
+            const roomIdParse = JSON.parse(resData.data);
+            const roomById = database.getRoomById(roomIdParse['indexRoom']);
+            const roomJoiner = database.getUserById(id);
+            if(!roomById|| !roomJoiner){
+                console.log('room not found');
+                return;
+            }
+            roomById.addUser(roomJoiner);
+
+            const usersUid = roomById.getUsers.map(user=>user.getUserId);
+            const startGamePayload:Payload[] = []
+            usersUid.forEach(user=> {
+                const updRoom = JSON.stringify([]);
+                const createGamePayload = JSON.stringify({
+                    idGame: 0,
+                    idPlayer: user,
+                });
+                startGamePayload.push(onUpdateRequest(ROOM.UPDATE_ROOM, resData, updRoom, user),
+                    onUpdateRequest(ROOM.CREATE_GAME, resData, createGamePayload, user))
             })
-            const updRoom = JSON.stringify([])
-            return [
-                ROOM.ADD_PLAYER,
-                onUpdateRequest(ROOM.UPDATE_ROOM,resData,updRoom),
-                onUpdateRequest(ROOM.CREATE_GAME,resData,createGamePayload)
-            ]
+            return {type:ROOM.ADD_PLAYER, payload:startGamePayload};
         case GAME.ADD_SHIPS:
-            const shipsPayload = JSON.parse(resData.data)
+            const shipsPayload = JSON.parse(resData.data);
+            const userById = database.getUserById(id);
+
+            if(!userById){
+                console.log('not such user was found');
+                return;
+            }
+            userById.setShips(shipsPayload);
             const turnPayload = JSON.stringify({
-                currentPlayer: onGetUser(id)?.id,
-                id:0
-            })
-            return [
-                ROOM.START_GAME,
-                onUpdateRequest(ROOM.START_GAME,resData,shipsPayload['ships']),
-                onUpdateRequest(GAME.TURN,resData,turnPayload)];
-        case GAME.ATTACK:
+                currentPlayer: id,
+                id:0,
+            });
+            const foundRoom = database.getRoomByUser(id);
+
+            if(!foundRoom){
+                console.log("No room was found");
+                return;
+            }
+            const isFullRoom = foundRoom!['users']
+                .map(user => user
+                    .getShips
+                    .hasOwnProperty('ships')).every(i => i);
+
+            if(isFullRoom){
+                const result:Payload[] = []
+                foundRoom!['users'].forEach(user => {
+                    result.push(onUpdateRequest(ROOM.START_GAME, resData, JSON.stringify(user.getShips), user.getUserId),
+                        onUpdateRequest(GAME.TURN, resData, turnPayload, user.getUserId));
+                });
+                const shipsResponse:Response = {type:ROOM.START_GAME, payload: result};
+                return shipsResponse;
+            }
+            return {type:'', payload:[]};
     }
 }
 
-const onUpdateRequest = (type:string,resData:Payload,  data:string):Payload => {
+const onUpdateRequest = (type:string,resData:Payload,  data:string, id:number=0):Payload => {
     resData.type = type;
+    resData.id = id
     if(data){
         resData.data = data;
     }
     return JSON.parse(JSON.stringify(resData));
 }
+
+
+
