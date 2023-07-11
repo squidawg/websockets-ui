@@ -1,16 +1,26 @@
-import {Payload} from "./types.js";
+import {Room, User} from "./types.js";
 
-export const database:Payload[] = [];
+export class Database {
+    private users:User[] = [];
+    private rooms:Room[] = [];
 
+    addRoom(room:Room){
+        this.rooms.push(room);
+    }
+    addUser(user:User){
+        this.users.push(user);
+    }
+    getUserById = (uId:number) => {
+        return this.users.find(user => user.getUserId === uId);
+    }
+    getRoomById = (uId:number) => {
+        return this.rooms.find(room => room.getRoomId === uId);
+    }
 
-export const onUpdateDb = (id:string, user:Payload) => {
-    user.uid = id;
-    database.push(user);
-}
-export const onGetUser = (id:string) => {
-    const user = database.find(user => user.uid === id);
-    if (user){
-        const userName = JSON.parse(JSON.stringify(user.data));
-        return {'id': database.indexOf(user!), 'name':userName.split(',').at(0).replace('{"name":"','').replace('"','')};
+    getRoomByUser = (uId:number) => {
+        return this.rooms.map(room => room
+            .getUsers
+            .find(user => user.getUserId === uId) ? room : false).at(0)
     }
 }
+
