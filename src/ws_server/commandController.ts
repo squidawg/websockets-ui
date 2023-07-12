@@ -1,6 +1,6 @@
 import {RawData} from "ws";
 import {Database} from "../db.js";
-import {GAME, Payload, PLAYER, Response, Room, ROOM, User} from "../types.js";
+import {GAME, Payload, PLAYER, Response, Room, ROOM, ShipData, Ships, STATE, User} from "../types.js";
 
 const database = new Database();
 
@@ -74,12 +74,15 @@ export const commandController = (id:number,data: RawData) => {
         case GAME.ADD_SHIPS:
             const shipsPayload = JSON.parse(resData.data);
             const userById = database.getUserById(id);
+            shipsPayload.ships.forEach((ship:Ships)=>{
+                const shipInstance = new ShipData(ship);
+                userById!.addShip(shipInstance)
+            })
 
             if(!userById){
                 console.log('not such user was found');
                 return;
             }
-            userById.setShips(shipsPayload);
             const turnPayload = JSON.stringify({
                 currentPlayer: id,
                 id:0,
@@ -91,26 +94,60 @@ export const commandController = (id:number,data: RawData) => {
                 return;
             }
             const isFullRoom = foundRoom!['users']
-                .map(user => user
-                    .getShips
-                    .hasOwnProperty('ships')).every(i => i);
+                .map(user => user.getShips.length > 0)
+                .every(i => i);
 
             if(isFullRoom){
-                const result:Payload[] = []
-                foundRoom!['users'].forEach(user => {
-                    result.push(onUpdateRequest(ROOM.START_GAME, resData, JSON.stringify(user.getShips), user.getUserId),
+                const result:Payload[] = [];
+                foundRoom!['users']
+                    .forEach(user => {
+                    result.push(
+                        onUpdateRequest(ROOM.START_GAME, resData, JSON.stringify(user.getShips), user.getUserId),
                         onUpdateRequest(GAME.TURN, resData, turnPayload, user.getUserId));
                 });
                 const shipsResponse:Response = {type:ROOM.START_GAME, payload: result};
                 return shipsResponse;
             }
             return {type:'', payload:[]};
+        case GAME.ATTACK:
+            const attackCoordinates = JSON.parse(resData.data);
+            const shipPosition = database
+                .getRoomByUser(id)!
+                .getUsers
+                .find((user:User) => user.getUserId !== id);
+            shipPosition!.getShips.forEach((sh:ShipData)=> {
+                 sh.attackHandler(attackCoordinates.x, attackCoordinates.y)
+                }
+            )
+            const res = shipPosition!.getShips.find((ship:ShipData)=>
+                ship.getAttackState
+            )
+            if(!res){
+                console.log(`couldn't clear cache`);
+                return;
+            }
+            res!.setAttackState()
+            const attackPayload = JSON.stringify({
+                position:attackCoordinates,
+                currentPlayer: id,
+                status: res!.getState.state
+            });
+            const updTurn = JSON.stringify({
+                currentPlayer:shipPosition!.getUserId
+            })
+            const startGamePayloadTest:Payload[] = [];
+            startGamePayloadTest.push(
+                onUpdateRequest(GAME.ATTACK,resData, attackPayload,),
+                onUpdateRequest(GAME.TURN,resData,updTurn))
+
+
+            return {type:GAME.ATTACK, payload:startGamePayloadTest};
     }
 }
 
 const onUpdateRequest = (type:string,resData:Payload,  data:string, id:number=0):Payload => {
     resData.type = type;
-    resData.id = id
+    resData.id = id;
     if(data){
         resData.data = data;
     }
