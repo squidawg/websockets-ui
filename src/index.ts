@@ -1,7 +1,7 @@
 import { httpServer } from "./http_server/index.js";
 import WebSocket, {RawData, WebSocketServer} from 'ws'
 import {commandController} from "./ws_server/commandController.js";
-import {PLAYER, Response, ROOM} from "./types.js";
+import {GAME, PLAYER, Response, ROOM} from "./types.js";
 const HTTP_PORT = 3000;
 
 interface CustomWebsocket extends WebSocket{
@@ -46,6 +46,13 @@ wsServer.on('connection', (connection:CustomWebsocket, req) => {
                     })
                 });
                 break;
+            case GAME.ATTACK:
+                wsServer.clients.forEach((client:CustomWebsocket) =>{
+                    response.payload.forEach(res => {
+                        client.send(JSON.stringify(res))
+                    })
+                })
+                break
             default:
                 break
         }
