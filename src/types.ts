@@ -94,11 +94,16 @@ export class ShipData {
             const maxX = x <= this.shipData.position.x + this.shipData.length - 1;
             const staticY = y === this.shipData.position.y
             if(minX && maxX && staticY) {
-                this.setHitCounter(this.hitCounter += 1)
+                this.setHitCounter(this.hitCounter += 1);
                 this.state = STATE.SHOT;
-                this.attackState = true
+                this.attackState = true;
 
             }
+            else {
+                this.state = STATE.MISS;
+                return this.result;
+            }
+
         }
         if(this.shipData.direction) {
             const minY = y >= this.shipData.position.y;
@@ -110,12 +115,20 @@ export class ShipData {
                 this.attackState = true
 
             }
+            else {
+                this.state = STATE.MISS;
+                return this.result
+            }
+
         }
+
         if(this.shipData.length === this.hitCounter){
             this.state = STATE.KILLED;
         }
-        this.result = {state: this.state, x:x, y:y, attackState:this.attackState}
 
+
+        this.result = {state: this.state, x:x, y:y, attackState:this.attackState}
+        console.log(this.result)
 
         return this.result;
     }

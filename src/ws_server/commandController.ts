@@ -119,29 +119,27 @@ export const commandController = (id:number,data: RawData) => {
                  sh.attackHandler(attackCoordinates.x, attackCoordinates.y)
                 }
             )
-            const res = shipPosition!.getShips.find((ship:ShipData)=>
-                ship.getAttackState
-            )
-            if(!res){
-                console.log(`couldn't clear cache`);
-                return;
+            const res = shipPosition!.getShips.find((ship:ShipData) =>
+                ship.getAttackState);
+            if(res){
+                res!.setAttackState();
             }
-            res!.setAttackState()
             const attackPayload = JSON.stringify({
                 position:attackCoordinates,
                 currentPlayer: id,
-                status: res!.getState.state
+                status: res?.getState?.state || STATE.MISS
             });
             const updTurn = JSON.stringify({
                 currentPlayer:shipPosition!.getUserId
-            })
+            });
             const startGamePayloadTest:Payload[] = [];
             startGamePayloadTest.push(
                 onUpdateRequest(GAME.ATTACK,resData, attackPayload,),
-                onUpdateRequest(GAME.TURN,resData,updTurn))
-
+                onUpdateRequest(GAME.TURN,resData,updTurn));
 
             return {type:GAME.ATTACK, payload:startGamePayloadTest};
+        case GAME.RANDOM_ATTACK:
+            return;
     }
 }
 
