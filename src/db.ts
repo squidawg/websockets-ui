@@ -5,12 +5,12 @@ export class Database {
     private rooms:Room[] = [];
     private ships:ShipData[] = [];
 
-    addShip(ship:ShipData){
-        this.ships.push(ship)
-    }
-    get getShips(){
-        return this.ships
-    }
+    //addShip(ship:ShipData){
+       // this.ships.push(ship)
+    //}
+    // get getShips(){
+    //     return this.ships
+    // }
 
     addRoom(room:Room){
         this.rooms.push(room);
@@ -18,13 +18,16 @@ export class Database {
     addUser(user:User){
         this.users.push(user);
     }
-    getUserById = (uId:number) => {
+    get getUsers() {
+        return this.users
+    }
+    getUserById = (uId:string) => {
         return this.users.find(user => user.getUserId === uId);
     }
     getRoomById = (uId:number) => {
         return this.rooms.find(room => room.getRoomId === uId);
     }
-    getRoomByUser = (uId:number) => {
+    getRoomByUser = (uId:string) => {
         return this.rooms.map(room => room
             .getUsers
             .find(user => user.getUserId === uId) ? room : room).at(0)

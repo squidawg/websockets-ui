@@ -3,7 +3,7 @@ export interface Payload {
     uid?:string,
     type:string
     data:{}|""
-    id:number
+    id:string|number
 }
 
 export interface Ships {
@@ -12,16 +12,27 @@ export interface Ships {
     type:string,
     length:number
 }
+
 export interface Response {
     type:ROOM|PLAYER|string,
     payload:Payload[]
+    id?:string[]
 }
+
+export interface ShipdataPayload {
+    state:STATE,
+    x:number,
+    y:number,
+    attackState:boolean
+}
+
 export class User {
-    private readonly uid: number;
+    private readonly uid: string;
     private readonly name: string;
     private readonly password: string;
+    private index:number = 0;
     private ships:ShipData[] = [];
-    constructor(uid:number,name:string, password: string) {
+    constructor(uid:string,name:string, password: string) {
         this.uid = uid;
         this.name = name;
         this.password = password;
@@ -39,6 +50,12 @@ export class User {
     }
     get getName(){
         return this.name;
+    }
+    setIndex(i:number){
+        this.index = i
+    }
+    get userIndex(){
+        return this.index
     }
 
 }
@@ -65,25 +82,43 @@ export class Room {
 export class ShipData {
     private state: STATE = STATE.ACTIVE;
     private hitCounter = 0;
-    private result:{
-        state:STATE,
-        x:number,
-        y:number,
-        attackState:boolean
-    } = {
+    private shipPostion:{x:number, y:number, length:number}[] = [];
+    private result:ShipdataPayload = {
         state:STATE.ACTIVE,
         x:0,
         y:0,
         attackState:false
     };
-    private shipData:Ships;
+    private readonly shipData:Ships;
     private attackState = false;
     constructor(shipData:Ships){
         this.shipData = shipData;
+        this.shipPosition()
     }
-    setHitCounter(hit:number){
-        this.hitCounter = hit
+    private setHitCounter(hit:number){
+        this.hitCounter = hit;
     }
+
+    shipPosition() {
+        const minX = this.shipData.position.x;
+        const minY = this.shipData.position.y;
+        const shipDir = this.shipData.direction;
+        const shipLength = this.shipData.length;
+        if(!shipDir) {
+            for(let i = minX; i < minX+shipLength;i++){
+                this.shipPostion.push({x:i,y:minY,length:shipLength});
+            }
+        }
+        if(shipDir) {
+            for(let i = minY; i < minY+shipLength;i++){
+                this.shipPostion.push({x:minX,y:i,length:shipLength});
+            }
+        }
+    }
+    get getShipPosition() {
+        return this.shipPostion;
+    }
+
 
     attackHandler(x:number,y:number){
         if(this.state === STATE.KILLED){
@@ -92,7 +127,7 @@ export class ShipData {
         if(!this.shipData.direction){
             const minX = x >= this.shipData.position.x;
             const maxX = x <= this.shipData.position.x + this.shipData.length - 1;
-            const staticY = y === this.shipData.position.y
+            const staticY = y === this.shipData.position.y;
             if(minX && maxX && staticY) {
                 this.setHitCounter(this.hitCounter += 1);
                 this.state = STATE.SHOT;
@@ -108,11 +143,11 @@ export class ShipData {
         if(this.shipData.direction) {
             const minY = y >= this.shipData.position.y;
             const maxY = y <= this.shipData.position.y + this.shipData.length - 1;
-            const staticX = x === this.shipData.position.x
+            const staticX = x === this.shipData.position.x;
             if(minY && maxY && staticX) {
-                this.setHitCounter(this.hitCounter += 1)
+                this.setHitCounter(this.hitCounter += 1);
                 this.state = STATE.SHOT;
-                this.attackState = true
+                this.attackState = true;
 
             }
             else {
@@ -121,14 +156,11 @@ export class ShipData {
             }
 
         }
-
         if(this.shipData.length === this.hitCounter){
             this.state = STATE.KILLED;
         }
 
-
         this.result = {state: this.state, x:x, y:y, attackState:this.attackState}
-        console.log(this.result)
 
         return this.result;
     }
@@ -136,10 +168,13 @@ export class ShipData {
         return this.result;
     }
     setAttackState(){
-        this.attackState = false
+        this.attackState = false;
     }
     get getAttackState(){
-        return this.attackState
+        return this.attackState;
+    }
+    get getShips(){
+        return this.shipData
     }
 
 }
