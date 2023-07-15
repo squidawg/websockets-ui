@@ -2,10 +2,11 @@ import { httpServer } from "./http_server/index.js";
 import WebSocket, {RawData, WebSocketServer} from 'ws'
 import {commandController} from "./ws_server/commandController.js";
 import {GAME, PLAYER, Response, ROOM} from "./types.js";
+import * as crypto from "crypto";
 const HTTP_PORT = 3000;
 
 interface CustomWebsocket extends WebSocket{
-    id?:number
+    id?:string
 }
 
 httpServer.listen(HTTP_PORT, () => {
@@ -15,10 +16,10 @@ const wsServer = new WebSocketServer({ server: httpServer });
 
 wsServer.on('connection', (connection:CustomWebsocket, req) => {
     console.log('received a new connection');
-    const id = Math.floor(Math.random() * 10) + 1;
-    connection.id = id;
+    const uuid = crypto.randomBytes(20).toString('hex')
+    connection.id = uuid;
     connection.on('message', async (data:RawData) => {
-        const response:Response = commandController(id,data)!;
+        const response:Response = commandController(uuid,data)!;
         switch (response.type){
             case PLAYER.REG:
                 connection.send(JSON.stringify(response.payload.at(0)));
@@ -32,6 +33,7 @@ wsServer.on('connection', (connection:CustomWebsocket, req) => {
                 wsServer.clients.forEach((client:CustomWebsocket) => {
                     response.payload.forEach((res) => {
                         if(res.id === client.id){
+                            res.id = 0;
                             client.send(JSON.stringify(res));
                         }
                     })
@@ -41,6 +43,7 @@ wsServer.on('connection', (connection:CustomWebsocket, req) => {
                 wsServer.clients.forEach((client:CustomWebsocket) => {
                     response.payload.forEach((res) => {
                         if(res.id === client.id){
+                            res.id = 0;
                             client.send(JSON.stringify(res));
                         }
                     })
@@ -53,8 +56,10 @@ wsServer.on('connection', (connection:CustomWebsocket, req) => {
                     })
                 })
                 break
+            case GAME.RANDOM_ATTACK:
+                break;
             default:
-                break
+                break;
         }
     })
 })
