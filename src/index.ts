@@ -71,4 +71,11 @@ wsServer.on('connection', (connection:CustomWebsocket) => {
                 break;
         }
     });
+    connection.on('close', () => {
+        connection.close()
+        console.log('connection closed')
+    })
+    connection.on('error', (error) => {
+        console.log(`error :${error.message}`)
+    })
 })

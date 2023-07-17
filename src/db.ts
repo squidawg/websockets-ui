@@ -1,4 +1,6 @@
-import {Room, ShipData, User} from "./types.js";
+import {Room} from "./helpers/room.js";
+import {User} from "./helpers/user.js";
+import {ShipData} from "./helpers/shipData.js";
 
 export class Database {
     private users:User[] = [];
