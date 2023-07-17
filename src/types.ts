@@ -1,9 +1,9 @@
+import WebSocket from "ws";
 
 export interface Payload {
-    uid?:string,
-    type:string
-    data:{}|""
-    id:string|number
+    type:string,
+    data:string,
+    id?:string|number,
 }
 
 export interface Ships {
@@ -15,8 +15,7 @@ export interface Ships {
 
 export interface Response {
     type:ROOM|PLAYER|string,
-    payload:Payload[]
-    id?:string[]
+    payload:Payload[],
 }
 
 export interface ShipdataPayload {
@@ -28,6 +27,7 @@ export interface ShipdataPayload {
 
 export class User {
     private score:number = 0;
+    private turnPlayer = false
     private readonly uid: string;
     private readonly name: string;
     private readonly password: string;
@@ -38,40 +38,52 @@ export class User {
         this.name = name;
         this.password = password;
     }
-
+    setTurn(){
+        this.turnPlayer = !this.turnPlayer;
+    };
+    get getTurn(){
+        return this.turnPlayer;
+    };
     addShip(ship:ShipData){
-        this.ships.push(ship)
-    }
+        this.ships.push(ship);
+    };
+    setScore(){
+        this.score += 1;
+    };
+    setIndex(i:number){
+        this.index = i;
+    };
 
     get getShips(){
         return this.ships;
-    }
+    };
     get getUserId(){
         return this.uid;
-    }
+    };
     get getName(){
         return this.name;
-    }
-    setScore(){
-        this.score += 1;
-    }
+    };
+    get getPassword(){
+        return this.password;
+    };
     get currentScore(){
         return this.score;
-    }
-    setIndex(i:number){
-        this.index = i
-    }
+    };
     get userIndex(){
-        return this.index
-    }
+        return this.index;
+    };
 
 }
 
 export class Room {
     private readonly roomId:number;
+    private nextUser:string = '';
     private users: User[] = [];
     constructor(roomId:number) {
         this.roomId = roomId;
+    }
+    setNextUser(user:string){
+        this.nextUser = user;
     }
     addUser(user:User){
         this.users.push(user);
@@ -166,12 +178,6 @@ export class ShipData {
 
 }
 
-export interface AttackPayload {
-    position:number,
-    currentPlayer:number,
-    status: STATE
-}
-
 export enum PLAYER {
     REG ='reg',
     UPDATE_WINNERS='update_winners',
@@ -183,7 +189,6 @@ export enum ROOM {
     UPDATE_ROOM='update_room',
     ADD_PLAYER='add_user_to_room',
     START_GAME='start_game',
-    FINISH_GAME='finish',
 }
 
 export enum GAME {
@@ -191,7 +196,7 @@ export enum GAME {
     ATTACK='attack',
     RANDOM_ATTACK='randomAttack',
     TURN='turn',
-    FINISH='finish'
+    FINISH_GAME='finish',
 }
 
 export enum STATE {
@@ -199,4 +204,8 @@ export enum STATE {
     SHOT='shot',
     KILLED='killed',
     ACTIVE='active'
+}
+
+export interface CustomWebsocket extends WebSocket {
+    id?: string
 }

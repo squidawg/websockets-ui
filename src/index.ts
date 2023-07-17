@@ -1,26 +1,28 @@
-import { httpServer } from "./http_server/index.js";
-import WebSocket, {RawData, WebSocketServer} from 'ws'
+import {httpServer} from "./http_server/index.js";
+import {RawData} from 'ws'
 import {commandController} from "./ws_server/commandController.js";
-import {GAME, PLAYER, Response, ROOM} from "./types.js";
+import {CustomWebsocket, GAME, PLAYER, Response, ROOM} from "./types.js";
 import * as crypto from "crypto";
-const HTTP_PORT = 3000;
+import {WebSocketServer} from "ws";
 
-interface CustomWebsocket extends WebSocket{
-    id?:string
-}
+const HTTP_PORT = 3000;
 
 httpServer.listen(HTTP_PORT, () => {
     console.log(`Start static http server on the ${HTTP_PORT} port!`);
 });
-const wsServer = new WebSocketServer({ server: httpServer });
 
-wsServer.on('connection', (connection:CustomWebsocket, req) => {
+export const wsServer = new WebSocketServer({server: httpServer});
+
+wsServer.on('connection', (connection:CustomWebsocket) => {
     console.log('received a new connection');
-    const uuid = crypto.randomBytes(20).toString('hex')
+    const uuid = crypto.randomBytes(20).toString('hex');
     connection.id = uuid;
+    connection.on('error', (error) => {
+        console.error('WebSocket error:', error);
+    });
     connection.on('message', async (data:RawData) => {
-        const response:Response = commandController(uuid,data)!;
-        switch (response.type){
+        const response:Response = commandController(uuid, data)!;
+        switch (response.type!){
             case PLAYER.REG:
                 wsServer.clients.forEach((client:CustomWebsocket) => {
                     response.payload.forEach((res) => {
@@ -28,8 +30,8 @@ wsServer.on('connection', (connection:CustomWebsocket, req) => {
                             res.id = 0;
                             client.send(JSON.stringify(res));
                         }
-                        client.send(JSON.stringify(res));
                     })
+                    client.send(JSON.stringify(response.payload.at(-1)));
                 });
                 break;
             case ROOM.UPDATE_ROOM:
@@ -65,7 +67,8 @@ wsServer.on('connection', (connection:CustomWebsocket, req) => {
                 })
                 break
             default:
+                connection.send(JSON.stringify({error: 'user exists or you are using wrong password'}))
                 break;
         }
-    })
+    });
 })

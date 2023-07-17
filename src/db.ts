@@ -5,13 +5,6 @@ export class Database {
     private rooms:Room[] = [];
     private ships:ShipData[] = [];
 
-    //addShip(ship:ShipData){
-       // this.ships.push(ship)
-    //}
-    // get getShips(){
-    //     return this.ships
-    // }
-
     addRoom(room:Room){
         this.rooms.push(room);
     }
