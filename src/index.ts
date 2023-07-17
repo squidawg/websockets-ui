@@ -22,7 +22,15 @@ wsServer.on('connection', (connection:CustomWebsocket, req) => {
         const response:Response = commandController(uuid,data)!;
         switch (response.type){
             case PLAYER.REG:
-                connection.send(JSON.stringify(response.payload.at(0)));
+                wsServer.clients.forEach((client:CustomWebsocket) => {
+                    response.payload.forEach((res) => {
+                        if(res.id === client.id){
+                            res.id = 0;
+                            client.send(JSON.stringify(res));
+                        }
+                        client.send(JSON.stringify(res));
+                    })
+                });
                 break;
             case ROOM.UPDATE_ROOM:
                 wsServer.clients.forEach((client:CustomWebsocket) => {
@@ -56,8 +64,6 @@ wsServer.on('connection', (connection:CustomWebsocket, req) => {
                     })
                 })
                 break
-            case GAME.RANDOM_ATTACK:
-                break;
             default:
                 break;
         }
