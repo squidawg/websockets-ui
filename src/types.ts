@@ -27,6 +27,7 @@ export interface ShipdataPayload {
 }
 
 export class User {
+    private score:number = 0;
     private readonly uid: string;
     private readonly name: string;
     private readonly password: string;
@@ -50,6 +51,12 @@ export class User {
     }
     get getName(){
         return this.name;
+    }
+    setScore(){
+        this.score += 1;
+    }
+    get currentScore(){
+        return this.score;
     }
     setIndex(i:number){
         this.index = i
@@ -82,7 +89,6 @@ export class Room {
 export class ShipData {
     private state: STATE = STATE.ACTIVE;
     private hitCounter = 0;
-    private shipPostion:{x:number, y:number, length:number}[] = [];
     private result:ShipdataPayload = {
         state:STATE.ACTIVE,
         x:0,
@@ -93,32 +99,10 @@ export class ShipData {
     private attackState = false;
     constructor(shipData:Ships){
         this.shipData = shipData;
-        this.shipPosition()
     }
     private setHitCounter(hit:number){
         this.hitCounter = hit;
     }
-
-    shipPosition() {
-        const minX = this.shipData.position.x;
-        const minY = this.shipData.position.y;
-        const shipDir = this.shipData.direction;
-        const shipLength = this.shipData.length;
-        if(!shipDir) {
-            for(let i = minX; i < minX+shipLength;i++){
-                this.shipPostion.push({x:i,y:minY,length:shipLength});
-            }
-        }
-        if(shipDir) {
-            for(let i = minY; i < minY+shipLength;i++){
-                this.shipPostion.push({x:minX,y:i,length:shipLength});
-            }
-        }
-    }
-    get getShipPosition() {
-        return this.shipPostion;
-    }
-
 
     attackHandler(x:number,y:number){
         if(this.state === STATE.KILLED){
@@ -164,6 +148,9 @@ export class ShipData {
 
         return this.result;
     }
+    get stateGetter(){
+        return this.state
+    }
     get getState(){
         return this.result;
     }
@@ -179,6 +166,12 @@ export class ShipData {
 
 }
 
+export interface AttackPayload {
+    position:number,
+    currentPlayer:number,
+    status: STATE
+}
+
 export enum PLAYER {
     REG ='reg',
     UPDATE_WINNERS='update_winners',
@@ -190,14 +183,15 @@ export enum ROOM {
     UPDATE_ROOM='update_room',
     ADD_PLAYER='add_user_to_room',
     START_GAME='start_game',
-    FINISH_GAME='finish'
+    FINISH_GAME='finish',
 }
 
 export enum GAME {
     ADD_SHIPS='add_ships',
     ATTACK='attack',
     RANDOM_ATTACK='randomAttack',
-    TURN='turn'
+    TURN='turn',
+    FINISH='finish'
 }
 
 export enum STATE {
