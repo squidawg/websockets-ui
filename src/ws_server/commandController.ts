@@ -25,9 +25,23 @@ export const commandController = (uId:string,data: RawData) => {
                     errorText: '',
                 }
             );
+            const allUsers: {wins: number, name: string}[] = []
+            database.getUsers.forEach(user => {
+                const winnerPayload = ({
+                    name: user!.getName,
+                    wins: user!.currentScore
+                })
+                allUsers.push(winnerPayload)
+            })
+
+            const regPayload:Payload[] = []
+            regPayload.push(
+                onUpdateRequest(PLAYER.REG,resData,userPayload,user.getUserId),
+                onUpdateRequest(PLAYER.UPDATE_WINNERS,resData,JSON.stringify(allUsers))
+                )
             const userResponse:Response = {
                 type:PLAYER.REG,
-                payload: [onUpdateRequest(PLAYER.REG,resData,userPayload)]
+                payload: regPayload
             }
             return userResponse
         case ROOM.CREATE_ROOM:
@@ -132,43 +146,8 @@ export const commandController = (uId:string,data: RawData) => {
             const attackResult = secondPlayer!.getShips.find((ship:ShipData) =>
                 ship.getAttackState);
 
-            if(attackResult){
+            if(attackResult) {
                 attackResult!.setAttackState();
-            }
-            if(attackResult?.getState?.state === STATE.KILLED){
-                const currentShip:Ships = attackResult.getShips;
-                const minX = currentShip.position.x - 1 === -1 ? 0 : currentShip.position.x - 1;
-                const minY = currentShip.position.y - 1 === -1 ? 0:currentShip.position.y - 1;
-
-                if(!currentShip.direction) {
-                    const maxX = currentShip.position.x + currentShip.length >= 10 ?
-                        9 :currentShip.position.x + currentShip.length;
-                    const maxY = currentShip.position.y + 2 >= 10 ? 10: currentShip.position.y + 2;
-                    for(let y = minY; y < maxY; y++){
-                        for(let x = minX; x <= maxX; x++){
-                                if(!(x >= currentShip.position.x
-                                    && x < currentShip.position.x + currentShip.length
-                                    && y === currentShip.position.y)){
-                                    console.log(`x:${x}, y:${y}`);
-                                }
-                        }
-                    }
-                }
-
-                if(currentShip.direction) {
-                    const maxY = currentShip.position.y + currentShip.length >= 10 ?
-                        9 :currentShip.position.y + currentShip.length;
-                    const maxX = currentShip.position.x + 2 >= 10 ? 10: currentShip.position.x + 2;
-                    for(let y = minY; y <= maxY; y++){
-                        for(let x = minX; x < maxX; x++){
-                            if(!(y >= currentShip.position.y
-                                && y < currentShip.position.y + currentShip.length
-                                && x === currentShip.position.x)){
-                                console.log(`x:${x}, y:${y}`);
-                            }
-                        }
-                    }
-                }
             }
 
             const currentUser = database
@@ -182,7 +161,7 @@ export const commandController = (uId:string,data: RawData) => {
                 .find((user:User) => user.getUserId !== uId);
 
             const attackPayload = JSON.stringify({
-                position:attackCoordinates,
+                position:{x:attackCoordinates.x, y:attackCoordinates.y},
                 currentPlayer: currentUser!.userIndex,
                 status: attackResult?.getState?.state || STATE.MISS
             });
@@ -191,11 +170,75 @@ export const commandController = (uId:string,data: RawData) => {
                 currentPlayer:opponentPlayer!.userIndex
             });
 
+
+
             const startGamePayloadTest:Payload[] = [];
             startGamePayloadTest.push(
                 onUpdateRequest(GAME.ATTACK,resData, attackPayload),
-                onUpdateRequest(GAME.TURN,resData,updTurn));
+            );
 
+            if(attackResult?.getState?.state === STATE.KILLED) {
+                const currentShip:Ships = attackResult.getShips;
+                const minX = currentShip.position.x - 1 === -1 ? 0 : currentShip.position.x - 1;
+                const minY = currentShip.position.y - 1 === -1 ? 0:currentShip.position.y - 1;
+
+                if(!currentShip.direction) {
+                    const maxX = currentShip.position.x + currentShip.length >= 10 ?
+                        9 :currentShip.position.x + currentShip.length;
+                    const maxY = currentShip.position.y + 2 >= 10 ? 10: currentShip.position.y + 2;
+                    for(let i = minY; i < maxY; i++) {
+                        for(let j = minX; j <= maxX; j++) {
+                            if(!(j >= currentShip.position.x
+                                && j < currentShip.position.x + currentShip.length
+                                && i === currentShip.position.y)) {
+                                const missPayload = JSON.stringify({
+                                    position:{x:j, y:i},
+                                    currentPlayer:currentUser!.userIndex,
+                                    state:STATE.MISS
+                                })
+                                startGamePayloadTest.push(onUpdateRequest(GAME.ATTACK, resData, missPayload))
+                            }
+                        }
+                    }
+                }
+                if(currentShip.direction) {
+                    const maxY = currentShip.position.y + currentShip.length >= 10 ?
+                        9 :currentShip.position.y + currentShip.length;
+                    const maxX = currentShip.position.x + 2 >= 10 ? 10: currentShip.position.x + 2;
+                    for(let j = minY; j <= maxY; j++) {
+                        for(let i = minX; i < maxX; i++) {
+                            if(!(j >= currentShip.position.y
+                                && j < currentShip.position.y + currentShip.length
+                                && i === currentShip.position.x)) {
+                                const missPayload = JSON.stringify({
+                                    position:{x:i, y:j},
+                                    currentPlayer:currentUser!.userIndex,
+                                    state:STATE.MISS
+                                })
+                                startGamePayloadTest.push(onUpdateRequest(GAME.ATTACK, resData, missPayload))
+                            }
+                        }
+                    }
+                }
+            }
+            startGamePayloadTest.push(onUpdateRequest(GAME.TURN,resData,updTurn));
+            const isGameOver = secondPlayer!.getShips.every( ship=>
+                ship.stateGetter === STATE.KILLED
+            )
+            if(isGameOver){
+                const curUser = database.getUserById(uId);
+                curUser!.setScore()
+                const finPayload = JSON.stringify({
+                    winPlayer: currentUser!.userIndex,
+                })
+                const winnerPayload = JSON.stringify([{
+                    name: curUser!.getName,
+                    wins: curUser!.currentScore
+                }])
+                startGamePayloadTest.push(
+                    onUpdateRequest(GAME.FINISH, resData ,finPayload),
+                    onUpdateRequest(PLAYER.UPDATE_WINNERS,resData,winnerPayload))
+            }
             return {type:GAME.ATTACK, payload:startGamePayloadTest};
         case GAME.RANDOM_ATTACK:
             const randomX = Math.floor(Math.random() * 10)
