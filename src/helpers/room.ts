@@ -2,7 +2,7 @@ import {User} from "./user.js";
 
 export class Room {
     private readonly roomId: number;
-    private nextUser: string = '';
+    private nextUser = '';
     private users: User[] = [];
 
     constructor(roomId: number) {
